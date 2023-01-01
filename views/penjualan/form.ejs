@@ -1,0 +1,198 @@
+<%- include('../partial/header') %>
+
+    <div class="card">
+        <div class="card-header">
+            <h1>Transaksi Baru</h1>
+        </div>
+        <div class="card-body">
+            <form id="form-add-transaksi" class="row g-3">
+                <div class="col-md-6">
+                    <label for="no_invoice" class="form-label">No. Invoice</label>
+                    <input type="text" class="form-control" id="no_invoice" value="<%= penjualan.no_invoice %>"
+                        readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="date" class="form-label">Waktu</label>
+                    <input type="text" class="form-control" id="date"
+                        value="<%= moment(penjualan.date).format('DD MMM YYYY HH:mm:ss') %>" readonly>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Tambah Transaksi</button>
+                </div>
+            </form>
+        </div>
+        <hr>
+        <div class="card-body">
+            <form id="detail-form" class="row g-3">
+                <div class="col-md-6">
+                    <label for="id_barang" class="form-label">Kode Barang</label>
+                    <select name="id_barang" id="id_barang" class="form-control">
+                        <% barang.forEach ( item=> { %>
+                            <option value="<%= item.id_barang %>">
+                                <%= item.id_barang + ' - ' + item.nama_barang %>
+                            </option>
+                            <% }) %>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="nama_barang" class="form-label">Nama Barang</label>
+                    <input type="text" class="form-control" id="nama_barang" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label for="harga_jual" class="form-label">Harga Jual</label>
+                    <input type="text" class="form-control" id="harga_jual">
+                </div>
+                <div class="col-md-6">
+                    <label for="qty" class="form-label">Qty</label>
+                    <input type="text" class="form-control" id="qty">
+                </div>
+                <div class="col-md-6">
+                    <label for="total_harga_item" class="form-label">Total Harga</label>
+                    <input type="text" class="form-control" id="total_harga_item">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Tambah</button>
+                </div>
+            </form>
+        </div>
+        <hr>
+        <div class="card-body">
+            <table id="detail-table" class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Kode Barang</th>
+                        <th>Nama Barang</th>
+                        <th>Qty</th>
+                        <th>Harga Jual</th>
+                        <th>Total Harga</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <form>
+            <div class="row mb-3">
+                <label for="total_harga" class="col-sm-2 col-form-label">Total Harga</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="total_harga" value="<%= penjualan.total_harga%>"
+                        readonly>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <label for="total_bayar" class="col-sm-2 col-form-label">Total Bayar</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="total_bayar">
+                </div>
+            </div>
+            <div class="row mb-3">
+                <label for="kembalian" class="col-sm-2 col-form-label">Total Kembalian</label>
+                <div class="col-sm-10">
+                    <input type="text" class="form-control" id="kembalian">
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Selesai</button>
+        </form>
+    </div>
+    </div>
+
+    <script>
+        let no_invoice = '<%= penjualan.no_invoice %>';
+        $(document).ready(function () {
+
+            readDetails()
+
+            $('#id_barang').change(function () {
+                const id_barang = $(this).val()
+                $.get(`/penjualan/barang/${id_barang}`).done(function (data) {
+                    $('#nama_barang').val(data.nama_barang)
+                    $('#harga_jual').val(data.harga_jual)
+                    $('#qty').val(1)
+                    $('#total_harga_item').val(data.total_harga_item)
+                })
+            })
+            $('#qty').keyup(function () {
+                const qty = $(this).val()
+                const harga_jual = $('#harga_jual').val()
+                $('#total_harga_item').val(harga_jual * qty)
+            })
+
+            $('#total_bayar').keyup(function () {
+                const total_bayar = $(this).val()
+                const total_harga = $('#total_harga').val()
+                $('#kembalian').val(currencyFormatter.format(total_bayar - total_harga))
+            })
+
+            $('#detail-form').submit(function (e) {
+                e.preventDefault();
+                const id_barang = $('#id_barang').val()
+                const qty = $('#qty').val()
+                console.log(id_barang, qty)
+                $.post('/penjualan/additem', { no_invoice, id_barang, qty }).done(function (data) {
+                    readDetails()
+                    $('#total_harga').val(currencyFormatter.format(data.total_harga))
+                })
+            })
+        })
+        const readDetails = () => {
+            $.get(`/penjualan/details/${no_invoice}`).done(function (data) {
+                console.log(data)
+                let html = ''
+                data.forEach((item, index) => {
+                    html += `
+                    <tr>
+                        <td>
+                            ${index + 1}
+                        </td>
+                        <td>
+                            ${item.id_barang}
+                        </td>
+                        <td>
+                            ${item.nama_barang}
+                        </td>
+                        <td>
+                            ${item.qty}
+                        </td>
+                        <td class="right-position">
+                            ${currencyFormatter.format(item.harga_jual)}
+                        </td>
+                        <td class="right-position">
+                            ${currencyFormatter.format(item.total_harga)}   
+                        </td>
+                        <td>
+                            <button type="submit" class="btn-sm btn btn-success">Edit</button>
+                            <button type="button" class="btn btn-danger btn-sm btn-delete" iddatas="${item.id_detail}">delete</button>
+                        </td>
+                    </tr>
+                    `
+                })
+                $('#detail-table tbody').html(html)
+            })
+        }
+
+        const removeItem = (item) => {
+            no_invoice = item.no_invoice
+            id_detail_jual = item.id_detail_jual
+            $.ajax({
+                method: "DELETE",
+                url: `/penjualan/delitem/${id_detail_jual}`,
+                dataType: "json",
+                data: { no_invoice }
+            }).done(function (data) {
+                readDetails()
+                const total_harga = $('#total_harga').val(parseInt(data[0].total))
+                const total_bayar = $('#total_bayar').val()
+                $('#kembalian').val((total_bayar - parseInt(data[0].total)))
+            }).fail(function (err) {
+                alert('gagal pakai jquery delete item')
+            })
+        }
+        
+    </script>
+
+    <%- include('../partial/footer') %>
